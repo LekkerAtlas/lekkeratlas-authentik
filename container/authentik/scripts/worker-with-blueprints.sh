@@ -5,6 +5,14 @@ source /usr/local/lib/lekkeratlas/common.sh
 
 worker_pid=""
 applier_pid=""
+state_dir="${LEKKERATLAS_STATE_DIR:-/tmp/lekkeratlas}"
+blueprint_ready_marker="${state_dir}/blueprints-ready"
+blueprint_failed_marker="${state_dir}/blueprints-failed"
+
+prepare_state_dir() {
+  mkdir -p "$state_dir"
+  rm -f "$blueprint_ready_marker" "$blueprint_failed_marker"
+}
 
 shutdown() {
   log "Received shutdown signal."
@@ -43,16 +51,21 @@ wait_for_authentik_ready() {
 }
 
 run_blueprint_applier() {
-  local max_attempts="${AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS:-5}"
-  local sleep_seconds="${AUTHENTIK_BLUEPRINT_APPLY_SLEEP_SECONDS:-3}"
+  local max_attempts="${AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS:-12}"
+  local sleep_seconds="${AUTHENTIK_BLUEPRINT_APPLY_SLEEP_SECONDS:-10}"
 
-  wait_for_authentik_ready || return 1
+  wait_for_authentik_ready || {
+    echo "Authentik healthcheck did not become ready." >"$blueprint_failed_marker"
+    return 1
+  }
 
   for attempt in $(seq 1 "$max_attempts"); do
     log "Blueprint deployment attempt ${attempt}/${max_attempts}"
 
     if /usr/local/lib/lekkeratlas/apply-blueprints-by-filename.sh; then
       log "Blueprint deployment succeeded."
+      date -Iseconds >"$blueprint_ready_marker"
+      rm -f "$blueprint_failed_marker"
       return 0
     fi
 
@@ -63,10 +76,13 @@ run_blueprint_applier() {
   done
 
   log "Blueprint deployment failed after ${max_attempts} attempts."
+  echo "Blueprint deployment failed after ${max_attempts} attempts." >"$blueprint_failed_marker"
   return 1
 }
 
 trap shutdown TERM INT
+
+prepare_state_dir
 
 log "Starting Authentik worker..."
 ak worker &

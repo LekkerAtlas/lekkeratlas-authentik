@@ -3,8 +3,8 @@ set -Eeuo pipefail
 
 source /usr/local/lib/lekkeratlas/common.sh
 
-blueprint_root="${AUTHENTIK_BLUEPRINT_ROOT:-/blueprints/custom/parts}"
-blueprint_path_prefix="${AUTHENTIK_BLUEPRINT_PATH_PREFIX:-custom/parts}"
+blueprint_root="/blueprints/custom/parts"
+blueprint_path_prefix="custom/parts"
 
 get_blueprint_files() {
   find "$blueprint_root" -maxdepth 1 -type f -name "*.yaml" -exec basename {} \; |

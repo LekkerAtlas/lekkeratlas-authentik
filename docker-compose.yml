@@ -1,4 +1,4 @@
-x-authentik-image-name: &authentik-image-name lekkeratlas-authentik:${AUTHENTIK_TAG:-2026.2.4}
+x-authentik-image-name: &authentik-image-name lekkeratlas-authentik:${AUTHENTIK_TAG:-2026.5.3}
 
 services:
   postgresql:
@@ -28,7 +28,7 @@ services:
       context: .
       dockerfile: container/authentik/Dockerfile
       args:
-        AUTHENTIK_TAG: ${AUTHENTIK_TAG:-2026.2.4}
+        AUTHENTIK_TAG: ${AUTHENTIK_TAG:-2026.5.3}
     restart: unless-stopped
     command: server
     depends_on:
@@ -49,8 +49,6 @@ services:
     shm_size: 512mb
     volumes:
       - authentik_data:/data
-      - ./custom-templates:/templates:ro
-      - ./authentik/blueprints:/blueprints/custom:ro
 
   worker:
     image: *authentik-image-name
@@ -72,6 +70,10 @@ services:
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?database password required}
 
+      AUTHENTIK_LEKKERATLAS_FQDN: ${AUTHENTIK_LEKKERATLAS_FQDN:?required}
+      AUTHENTIK_LEKKERATLAS_REDIRECT_URI: ${AUTHENTIK_LEKKERATLAS_REDIRECT_URI:?required}
+      AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN: ${AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN:?required}
+
       AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN: ${AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN:?required}
       AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET: ${AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET:?required}
       AUTHENTIK_RABBITMQ_CLIENT_SECRET: ${AUTHENTIK_RABBITMQ_CLIENT_SECRET:?required}
@@ -80,9 +82,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - authentik_data:/data
-      - ./certs:/certs
-      - ./custom-templates:/templates:ro
-      - ./authentik/blueprints:/blueprints/custom:ro
 
 volumes:
   database:

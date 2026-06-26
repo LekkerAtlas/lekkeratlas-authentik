@@ -10,8 +10,8 @@ on:
   workflow_dispatch:
 
 env:
-  AUTHENTIK_TAG: 2026.2.4
-  LOCAL_IMAGE: lekkeratlas-authentik:ci
+  AUTHENTIK_TAG: 2026.5.3
+  TESTED_IMAGE: lekkeratlas-authentik:2026.5.3
 
   # CI-only Authentik config
   PG_DB: authentik
@@ -28,6 +28,16 @@ env:
   AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET: ci-only-client-secret
   AUTHENTIK_RABBITMQ_CLIENT_SECRET: ci-only-rabbitmq-secret
 
+  # Compose ports
+  COMPOSE_PORT_HTTP: "9000"
+  COMPOSE_PORT_HTTPS: "9443"
+
+  # Blueprint development behavior
+  AUTHENTIK_BLUEPRINT_APPLY_ENABLED: "true"
+  AUTHENTIK_BLUEPRINT_APPLY_REQUIRED: "true"
+  AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS: "1"
+  AUTHENTIK_BLUEPRINT_ASSERT_RUNTIME_STATE: "true"
+
 jobs:
   test:
     name: Test image and blueprints
@@ -40,132 +50,69 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build custom Authentik image
+      - name: Create CI .env file
         run: |
-          docker build \
-            --build-arg AUTHENTIK_TAG="${AUTHENTIK_TAG}" \
-            --tag "${LOCAL_IMAGE}" \
-            --file container/authentik/Dockerfile \
-            .
+          cat > .env <<EOF
+          AUTHENTIK_TAG=${AUTHENTIK_TAG}
 
-      - name: Create CI compose file
+          PG_DB=${PG_DB}
+          PG_USER=${PG_USER}
+          PG_PASS=${PG_PASS}
+
+          AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY}
+          AUTHENTIK_ERROR_REPORTING__ENABLED=${AUTHENTIK_ERROR_REPORTING__ENABLED}
+
+          AUTHENTIK_LEKKERATLAS_FQDN=${AUTHENTIK_LEKKERATLAS_FQDN}
+          AUTHENTIK_LEKKERATLAS_REDIRECT_URI=${AUTHENTIK_LEKKERATLAS_REDIRECT_URI}
+          AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN=${AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN}
+          AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN=${AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN}
+          AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET=${AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET}
+          AUTHENTIK_RABBITMQ_CLIENT_SECRET=${AUTHENTIK_RABBITMQ_CLIENT_SECRET}
+
+          COMPOSE_PORT_HTTP=${COMPOSE_PORT_HTTP}
+          COMPOSE_PORT_HTTPS=${COMPOSE_PORT_HTTPS}
+
+          AUTHENTIK_BLUEPRINT_APPLY_ENABLED=${AUTHENTIK_BLUEPRINT_APPLY_ENABLED}
+          AUTHENTIK_BLUEPRINT_APPLY_REQUIRED=${AUTHENTIK_BLUEPRINT_APPLY_REQUIRED}
+          AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS=${AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS}
+          AUTHENTIK_BLUEPRINT_ASSERT_RUNTIME_STATE=${AUTHENTIK_BLUEPRINT_ASSERT_RUNTIME_STATE}
+          EOF
+
+      - name: Build and start Authentik stack
         run: |
-          cat > docker-compose.ci.yml <<'YAML'
-          services:
-            postgresql:
-              image: docker.io/library/postgres:16-alpine
-              environment:
-                POSTGRES_DB: ${PG_DB}
-                POSTGRES_USER: ${PG_USER}
-                POSTGRES_PASSWORD: ${PG_PASS}
-                PGDATA: /var/lib/postgresql/data/pgdata
-              healthcheck:
-                test:
-                  - CMD-SHELL
-                  - pg_isready -d "$${POSTGRES_DB}" -U "$${POSTGRES_USER}"
-                start_period: 20s
-                interval: 5s
-                retries: 20
-                timeout: 5s
-              volumes:
-                - database:/var/lib/postgresql/data
-
-            server:
-              image: ${LOCAL_IMAGE}
-              pull_policy: never
-              command: server
-              depends_on:
-                postgresql:
-                  condition: service_healthy
-              environment:
-                AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
-                AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED}
-                AUTHENTIK_POSTGRESQL__HOST: postgresql
-                AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
-                AUTHENTIK_POSTGRESQL__USER: ${PG_USER}
-                AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
-
-                AUTHENTIK_LEKKERATLAS_FQDN: ${AUTHENTIK_LEKKERATLAS_FQDN}
-                AUTHENTIK_LEKKERATLAS_REDIRECT_URI: ${AUTHENTIK_LEKKERATLAS_REDIRECT_URI}
-                AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN: ${AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN}
-                AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN: ${AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN}
-                AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET: ${AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET}
-                AUTHENTIK_RABBITMQ_CLIENT_SECRET: ${AUTHENTIK_RABBITMQ_CLIENT_SECRET}
-              ports:
-                - "9000:9000"
-              volumes:
-                - authentik_data:/data
-
-            worker:
-              image: ${LOCAL_IMAGE}
-              pull_policy: never
-              command: worker
-              depends_on:
-                postgresql:
-                  condition: service_healthy
-                server:
-                  condition: service_started
-              environment:
-                AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
-                AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED}
-                AUTHENTIK_POSTGRESQL__HOST: postgresql
-                AUTHENTIK_POSTGRESQL__NAME: ${PG_DB}
-                AUTHENTIK_POSTGRESQL__USER: ${PG_USER}
-                AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS}
-
-                AUTHENTIK_LEKKERATLAS_FQDN: ${AUTHENTIK_LEKKERATLAS_FQDN}
-                AUTHENTIK_LEKKERATLAS_REDIRECT_URI: ${AUTHENTIK_LEKKERATLAS_REDIRECT_URI}
-                AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN: ${AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN}
-                AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN: ${AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN}
-                AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET: ${AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET}
-                AUTHENTIK_RABBITMQ_CLIENT_SECRET: ${AUTHENTIK_RABBITMQ_CLIENT_SECRET}
-              volumes:
-                - authentik_data:/data
-
-          volumes:
-            database:
-            authentik_data:
-          YAML
-
-      - name: Start Authentik stack
-        run: |
-          docker compose -f docker-compose.ci.yml up -d
+          docker compose -f docker-compose.yml up -d --build
 
       - name: Wait for server readiness
         run: |
-          timeout 240 bash -c '
-            until curl -fsS http://localhost:9000/-/health/ready/ &> /dev/null; do
-              docker compose -f docker-compose.ci.yml ps
+          timeout 300 bash -c '
+            until curl -fsS http://localhost:9000/-/health/ready/ > /dev/null; do
+              echo "Server is not ready yet. Current container state:"
+              docker compose -f docker-compose.yml ps
+              echo
+              echo "Recent server logs:"
+              docker compose -f docker-compose.yml logs --no-color --tail=80 server
               sleep 5
             done
           '
 
       - name: Wait for worker readiness
         run: |
-          timeout 240 bash -c '
-            until docker compose -f docker-compose.ci.yml exec -T worker ak healthcheck; do
+          timeout 300 bash -c '
+            until docker compose -f docker-compose.yml exec -T worker ak healthcheck; do
               echo "Worker is not healthy yet. Current container state:"
-              docker compose -f docker-compose.ci.yml ps
+              docker compose -f docker-compose.yml ps
               echo
               echo "Recent worker logs:"
-              docker compose -f docker-compose.ci.yml logs --no-color --tail=80 worker
+              docker compose -f docker-compose.yml logs --no-color --tail=120 worker
               sleep 5
             done
           '
-
-      - name: Assert automatic blueprint loading
-        env:
-          AUTHENTIK_BLUEPRINT_AUTOLOAD_TIMEOUT_SECONDS: 300
-          AUTHENTIK_BLUEPRINT_AUTOLOAD_POLL_SECONDS: 5
-          AUTHENTIK_BLUEPRINT_STABLE_POLLS: 3
-        run: |
-          bash scripts/ci/wait_for_authentik_blueprint_autoload.sh docker-compose.ci.yml worker
 
       - name: Save tested Docker image
         if: github.event_name == 'pull_request'
         run: |
           mkdir -p out
-          docker save "${LOCAL_IMAGE}" > out/authentik-image.tar
+          docker save "${TESTED_IMAGE}" > out/authentik-image.tar
 
       - name: Upload tested Docker image artifact
         if: github.event_name == 'pull_request'
@@ -175,12 +122,13 @@ jobs:
           path: out/authentik-image.tar
           retention-days: 7
 
-      - name: Show logs on failure
+      - name: Dump logs on failure
         if: failure()
         run: |
-          docker compose -f docker-compose.ci.yml logs --no-color
+          docker compose -f docker-compose.yml ps
+          docker compose -f docker-compose.yml logs --no-color --tail=300
 
       - name: Cleanup
         if: always()
         run: |
-          docker compose -f docker-compose.ci.yml down -v
+          docker compose -f docker-compose.yml down -v
