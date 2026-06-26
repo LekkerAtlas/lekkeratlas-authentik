@@ -6,7 +6,7 @@ FROM ghcr.io/goauthentik/server:${AUTHENTIK_TAG}
 USER root
 
 COPY media/branding /data/media/public/branding
-COPY authentik/blueprints /blueprints/custom
+COPY authentik/blueprints/*.yaml /blueprints/custom/
 
 RUN chmod -R a+rX /data/media/public/branding /blueprints/custom
 
