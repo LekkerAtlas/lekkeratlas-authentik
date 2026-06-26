@@ -126,14 +126,16 @@ while true; do
     if [[ "$applier_status" != "0" ]]; then
       log "Blueprint deployment failed with status ${applier_status}."
 
-      if is_true "${AUTHENTIK_BLUEPRINT_APPLY_REQUIRED:-true}"; then
-        log "Stopping worker because AUTHENTIK_BLUEPRINT_APPLY_REQUIRED=true."
-        kill "$worker_pid" 2>/dev/null || true
-        wait "$worker_pid" 2>/dev/null || true
-        exit "$applier_status"
-      fi
+      echo "Blueprint deployment failed with status ${applier_status}." >"$blueprint_failed_marker"
+      rm -f "$blueprint_ready_marker"
 
-      log "Continuing because AUTHENTIK_BLUEPRINT_APPLY_REQUIRED=false."
+      if is_true "${AUTHENTIK_BLUEPRINT_APPLY_REQUIRED:-true}"; then
+        log "Keeping worker alive so Docker healthcheck can report unhealthy."
+        log "The failed marker has been written to ${blueprint_failed_marker}."
+        log "This container will remain running but unhealthy."
+      else
+        log "Continuing because AUTHENTIK_BLUEPRINT_APPLY_REQUIRED=false."
+      fi
     else
       log "Blueprint deployment completed successfully."
     fi
