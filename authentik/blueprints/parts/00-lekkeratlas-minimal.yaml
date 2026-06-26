@@ -4,7 +4,7 @@ version: 1
 metadata:
   name: LekkerAtlas minimal config
   labels:
-    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/instantiate: "false"
     blueprints.goauthentik.io/description: "Minimal LekkerAtlas config-as-code test"
 
 context: {}

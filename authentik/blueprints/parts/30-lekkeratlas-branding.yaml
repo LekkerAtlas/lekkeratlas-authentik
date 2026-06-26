@@ -1,11 +1,10 @@
-# authentik/blueprints/30-lekkeratlas-branding.yaml
 # yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
 version: 1
 
 metadata:
   name: LekkerAtlas branding
   labels:
-    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/instantiate: "false"
     blueprints.goauthentik.io/description: "Branding and media references for LekkerAtlas"
 
 context: {}

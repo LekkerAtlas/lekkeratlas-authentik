@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+
+metadata:
+  name: LekkerAtlas bootstrap
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: "Ordered LekkerAtlas bootstrap blueprint"
+
+context: {}
+
+entries:
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        path: custom/parts/10-lekkeratlas-login-flow.yaml
+      required: true
+
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        path: custom/parts/00-lekkeratlas-minimal.yaml
+      required: true
+
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        path: custom/parts/20-lekkeratlas-user-sync.yaml
+      required: true
+
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        path: custom/parts/30-lekkeratlas-branding.yaml
+      required: true
