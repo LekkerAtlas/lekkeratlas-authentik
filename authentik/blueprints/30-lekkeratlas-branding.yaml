@@ -1,0 +1,40 @@
+# authentik/blueprints/30-lekkeratlas-branding.yaml
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+
+metadata:
+  name: LekkerAtlas branding
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: "Branding and media references for LekkerAtlas"
+
+context: {}
+
+entries:
+  - model: authentik_brands.brand
+    identifiers:
+      domain: authentik-default
+    attrs:
+      default: true
+      branding_title: Lekker Atlas
+
+      branding_logo: branding/lekker_sicko_400x400.png
+      branding_favicon: branding/lekker_sicko_400x400.png
+      branding_default_flow_background: branding/vitaly-senior_gaming-unsplash.jpg
+      # branding_custom_css: !File /data/media/public/branding/custom.css
+
+      default_application:
+        !Find [authentik_core.application, [slug, lekker-atlas]]
+
+      flow_authentication:
+        !Find [authentik_flows.flow, [slug, lekkeratlas-authentication-flow]]
+      flow_device_code: null
+      flow_invalidation:
+        !Find [authentik_flows.flow, [slug, default-invalidation-flow]]
+      flow_recovery: null
+      flow_unenrollment: null
+      flow_user_settings: null
+
+      web_certificate: null
+      client_certificates: []
+      attributes: {}

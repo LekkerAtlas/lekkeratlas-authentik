@@ -1,0 +1,109 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+
+metadata:
+  name: LekkerAtlas login flow
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: "Single-screen username/password login flow for LekkerAtlas"
+
+context: {}
+
+entries:
+  - model: authentik_flows.flow
+    id: lekkeratlas-authentication-flow
+    identifiers:
+      slug: lekkeratlas-authentication-flow
+    attrs:
+      name: LekkerAtlas Login
+      title: Welcome to LekkerAtlas!
+      slug: lekkeratlas-authentication-flow
+      designation: authentication
+      authentication: none
+      compatibility_mode: true
+      denied_action: message_continue
+      layout: stacked
+      policy_engine_mode: any
+
+  - model: authentik_stages_password.passwordstage
+    id: lekkeratlas-password-stage
+    identifiers:
+      name: lekkeratlas-password
+    attrs:
+      name: lekkeratlas-password
+      backends:
+        - authentik.core.auth.InbuiltBackend
+        - authentik.sources.kerberos.auth.KerberosBackend
+        - authentik.sources.ldap.auth.LDAPBackend
+        - authentik.core.auth.TokenBackend
+      configure_flow:
+        !Find [authentik_flows.flow, [slug, default-password-change]]
+      failed_attempts_before_cancel: 5
+      allow_show_password: true
+
+  - model: authentik_stages_identification.identificationstage
+    id: lekkeratlas-identification-stage
+    identifiers:
+      name: lekkeratlas-identification
+    attrs:
+      name: lekkeratlas-identification
+      case_insensitive_matching: true
+      enable_remember_me: true
+      pretend_user_exists: true
+      show_matched_user: false
+      show_source_labels: false
+
+      user_fields:
+        - username
+        - email
+
+      sources: []
+      passwordless_flow: null
+      enrollment_flow: null
+      recovery_flow: null
+      webauthn_stage: null
+
+      # This is the important line.
+      # It embeds the password field into the username/email step.
+      password_stage: !KeyOf lekkeratlas-password-stage
+
+  - model: authentik_stages_user_login.userloginstage
+    id: lekkeratlas-user-login-stage
+    identifiers:
+      name: lekkeratlas-user-login
+    attrs:
+      name: lekkeratlas-user-login
+      geoip_binding: no_binding
+      network_binding: no_binding
+      remember_device: days=30
+      remember_me_offset: seconds=0
+      session_duration: seconds=0
+      terminate_other_sessions: false
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf lekkeratlas-authentication-flow
+      stage: !KeyOf lekkeratlas-identification-stage
+      order: 10
+    attrs:
+      target: !KeyOf lekkeratlas-authentication-flow
+      stage: !KeyOf lekkeratlas-identification-stage
+      order: 10
+      evaluate_on_plan: false
+      invalid_response_action: retry
+      policy_engine_mode: any
+      re_evaluate_policies: true
+
+  - model: authentik_flows.flowstagebinding
+    identifiers:
+      target: !KeyOf lekkeratlas-authentication-flow
+      stage: !KeyOf lekkeratlas-user-login-stage
+      order: 100
+    attrs:
+      target: !KeyOf lekkeratlas-authentication-flow
+      stage: !KeyOf lekkeratlas-user-login-stage
+      order: 100
+      evaluate_on_plan: false
+      invalid_response_action: retry
+      policy_engine_mode: any
+      re_evaluate_policies: true

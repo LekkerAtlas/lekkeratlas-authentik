@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+out/
+*.log
+.DS_Store
+/authentik/blueprints/archive

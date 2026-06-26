@@ -1,0 +1,99 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+
+metadata:
+  name: LekkerAtlas user sync
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: "Sync authentik user changes to the LekkerAtlas API"
+
+context: {}
+
+entries:
+  - model: authentik_events.notificationwebhookmapping
+    id: lekkeratlas-user-sync-body
+    identifiers:
+      name: webhook sync lekkeratlas db body
+    attrs:
+      name: webhook sync lekkeratlas db body
+      expression: |-
+        return {
+            "action": "authentik_user_sync",
+            "user": {
+                "uuid": user.uuid if user else None,
+                "username": user.username if user else None,
+                "name": user.name if user else None,
+                "email": user.email if user else None,
+                "date_joined": user.date_joined if user else None,
+                "last_updated": user.last_updated if user else None,
+                "last_login": user.last_login if user else None,
+            }
+        }
+
+  - model: authentik_events.notificationwebhookmapping
+    id: lekkeratlas-user-sync-headers
+    identifiers:
+      name: webhook sync lekkeratlas db header
+    attrs:
+      name: webhook sync lekkeratlas db header
+      expression: !Format
+        - |-
+          return {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer %s",
+          }
+        - !Env AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN
+
+  - model: authentik_events.notificationtransport
+    id: lekkeratlas-user-sync-transport
+    identifiers:
+      name: Sync user to lekkeratlas db
+    attrs:
+      name: Sync user to lekkeratlas db
+      mode: webhook
+      send_once: false
+      webhook_url: !Env AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN
+      webhook_mapping_body: !KeyOf lekkeratlas-user-sync-body
+      webhook_mapping_headers: !KeyOf lekkeratlas-user-sync-headers
+      email_subject_prefix: "authentik Notification: "
+      email_template: email/event_notification.html
+
+  - model: authentik_events.notificationrule
+    id: lekkeratlas-user-sync-rule
+    identifiers:
+      name: User Sync Rule
+    attrs:
+      name: User Sync Rule
+      destination_event_user: true
+      destination_group: null
+      severity: notice
+      transports:
+        - !KeyOf lekkeratlas-user-sync-transport
+
+  - model: authentik_policies_event_matcher.eventmatcherpolicy
+    id: lekkeratlas-sync-user-events-policy
+    identifiers:
+      name: Sync user events
+    attrs:
+      name: Sync user events
+      action: null
+      app: null
+      client_ip: null
+      execution_logging: true
+      model: authentik_core.user
+
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf lekkeratlas-user-sync-rule
+      policy: !KeyOf lekkeratlas-sync-user-events-policy
+      order: 0
+    attrs:
+      enabled: true
+      failure_result: false
+      group: null
+      negate: false
+      order: 0
+      policy: !KeyOf lekkeratlas-sync-user-events-policy
+      target: !KeyOf lekkeratlas-user-sync-rule
+      timeout: 30
+      user: null

@@ -1,0 +1,1 @@
+(A) Create working template for functional minimal setup
