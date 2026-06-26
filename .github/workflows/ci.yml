@@ -160,11 +160,12 @@ jobs:
           AUTHENTIK_BLUEPRINT_STABLE_POLLS: 3
         run: |
           bash scripts/ci/wait_for_authentik_blueprint_autoload.sh docker-compose.ci.yml worker
-            - name: Save tested Docker image
-              if: github.event_name == 'pull_request'
-              run: |
-                mkdir -p out
-                docker save "${LOCAL_IMAGE}" > out/authentik-image.tar
+
+      - name: Save tested Docker image
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p out
+          docker save "${LOCAL_IMAGE}" > out/authentik-image.tar
 
       - name: Upload tested Docker image artifact
         if: github.event_name == 'pull_request'
