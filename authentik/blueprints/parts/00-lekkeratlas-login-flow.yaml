@@ -65,7 +65,7 @@ entries:
 
       # This is the important line.
       # It embeds the password field into the username/email step.
-      password_stage: !KeyOf lekkeratlas-password-stage
+      password_stage: !KeyOf lekkeratlas-password-stages
 
   - model: authentik_stages_user_login.userloginstage
     id: lekkeratlas-user-login-stage
