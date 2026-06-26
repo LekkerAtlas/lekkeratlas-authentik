@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=https://goauthentik.io/blueprints/schema.json
+version: 1
+
+metadata:
+  name: LekkerAtlas minimal config
+  labels:
+    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/description: "Minimal LekkerAtlas config-as-code test"
+
+context: {}
+
+entries:
+  - model: authentik_providers_oauth2.oauth2provider
+    id: provider-lekkeratlas
+    identifiers:
+      name: Provider for LekkerAtlas
+    attrs:
+      name: Provider for LekkerAtlas
+      client_id: lekkeratlas-local
+      client_type: public
+      authorization_flow:
+        !Find [
+          authentik_flows.flow,
+          [slug, default-provider-authorization-implicit-consent],
+        ]
+      invalidation_flow:
+        !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      redirect_uris:
+        - matching_mode: strict
+          url: !Env AUTHENTIK_WEBHOOK_FQDN
+      property_mappings:
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]
+        - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
+      sub_mode: user_uuid
+      issuer_mode: per_provider
+
+  - model: authentik_core.application
+    identifiers:
+      slug: lekker-atlas
+    attrs:
+      name: LekkerAtlas
+      slug: lekker-atlas
+      provider: !KeyOf provider-lekkeratlas
+      meta_launch_url: !Env AUTHENTIK_LEKKERATLAS_FQDN
+      open_in_new_tab: false
+      policy_engine_mode: any

@@ -1,0 +1,91 @@
+x-authentik-image-name: &authentik-image-name lekkeratlas-authentik:${AUTHENTIK_TAG:-2026.2.4}
+
+services:
+  postgresql:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${PG_DB:-authentik}
+      POSTGRES_PASSWORD: ${PG_PASS:?database password required}
+      POSTGRES_USER: ${PG_USER:-authentik}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    volumes:
+      - database:/var/lib/postgresql/data
+
+  server:
+    image: *authentik-image-name
+    build:
+      context: .
+      dockerfile: container/authentik/Dockerfile
+      args:
+        AUTHENTIK_TAG: ${AUTHENTIK_TAG:-2026.2.4}
+    restart: unless-stopped
+    command: server
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?database password required}
+    ports:
+      - "${COMPOSE_PORT_HTTP:-9000}:9000"
+      - "${COMPOSE_PORT_HTTPS:-9443}:9443"
+    shm_size: 512mb
+    volumes:
+      - authentik_data:/data
+      - ./custom-templates:/templates:ro
+      - ./authentik/blueprints:/blueprints/custom:ro
+
+  worker:
+    image: *authentik-image-name
+    pull_policy: never
+    restart: unless-stopped
+    command: worker
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
+      AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
+      AUTHENTIK_POSTGRESQL__HOST: postgresql
+      AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
+      AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?database password required}
+
+      AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN: ${AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN:?required}
+      AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET: ${AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET:?required}
+      AUTHENTIK_RABBITMQ_CLIENT_SECRET: ${AUTHENTIK_RABBITMQ_CLIENT_SECRET:?required}
+    shm_size: 512mb
+    user: root
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - authentik_data:/data
+      - ./certs:/certs
+      - ./custom-templates:/templates:ro
+      - ./authentik/blueprints:/blueprints/custom:ro
+
+volumes:
+  database:
+    driver: local
+  authentik_data:
+    driver: local
