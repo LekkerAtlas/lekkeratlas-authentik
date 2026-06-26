@@ -153,29 +153,12 @@ jobs:
             done
           '
 
-      - name: Check blueprint status
+      - name: Wait for successful blueprints
+        env:
+          AUTHENTIK_BLUEPRINT_TIMEOUT_SECONDS: 240
+          AUTHENTIK_BLUEPRINT_POLL_SECONDS: 5
         run: |
-          docker compose -f docker-compose.ci.yml exec -T worker ak shell -c "
-          from authentik.blueprints.models import BlueprintInstance
-
-          blueprints = BlueprintInstance.objects.filter(path__startswith='custom/').order_by('path')
-
-          print('Blueprint status:')
-          for blueprint in blueprints:
-              print(f'- {blueprint.path}: {blueprint.status}')
-
-          bad = [blueprint for blueprint in blueprints if blueprint.status != 'successful']
-
-          if bad:
-              print()
-              print('Failing blueprints:')
-              for blueprint in bad:
-                  print(f'- {blueprint.path}: {blueprint.status}')
-              raise SystemExit(1)
-
-          print()
-          print('All custom blueprints are successful.')
-          "
+          bash scripts/ci/wait_for_authentik_blueprints.sh docker-compose.ci.yml worker
 
       - name: Check expected Authentik objects
         run: |
