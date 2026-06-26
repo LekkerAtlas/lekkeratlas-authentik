@@ -63,6 +63,9 @@ services:
     env_file:
       - .env
     environment:
+      LEKKERATLAS_HEALTH_REQUIRE_BLUEPRINTS: "true"
+      LEKKERATLAS_STATE_DIR: /tmp/lekkeratlas
+
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
       AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
       AUTHENTIK_POSTGRESQL__HOST: postgresql

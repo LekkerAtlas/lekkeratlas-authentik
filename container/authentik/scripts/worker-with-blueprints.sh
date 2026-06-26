@@ -51,8 +51,8 @@ wait_for_authentik_ready() {
 }
 
 run_blueprint_applier() {
-  local max_attempts="${AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS:-12}"
-  local sleep_seconds="${AUTHENTIK_BLUEPRINT_APPLY_SLEEP_SECONDS:-10}"
+  local max_attempts="${AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS:-5}"
+  local sleep_seconds="${AUTHENTIK_BLUEPRINT_APPLY_SLEEP_SECONDS:-3}"
 
   wait_for_authentik_ready || {
     echo "Authentik healthcheck did not become ready." >"$blueprint_failed_marker"
