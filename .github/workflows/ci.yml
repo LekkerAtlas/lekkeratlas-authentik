@@ -134,15 +134,24 @@ jobs:
       - name: Wait for server readiness
         run: |
           timeout 240 bash -c '
-            until curl -fsS http://localhost:9000/-/health/ready/ > /dev/null; do
+            until curl -fsS http://localhost:9000/-/health/ready/ &> /dev/null; do
               docker compose -f docker-compose.ci.yml ps
               sleep 5
             done
           '
 
-      - name: Check worker health
+      - name: Wait for worker readiness
         run: |
-          docker compose -f docker-compose.ci.yml exec -T worker ak healthcheck
+          timeout 240 bash -c '
+            until docker compose -f docker-compose.ci.yml exec -T worker ak healthcheck; do
+              echo "Worker is not healthy yet. Current container state:"
+              docker compose -f docker-compose.ci.yml ps
+              echo
+              echo "Recent worker logs:"
+              docker compose -f docker-compose.ci.yml logs --no-color --tail=80 worker
+              sleep 5
+            done
+          '
 
       - name: Check blueprint status
         run: |
@@ -208,5 +217,5 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: |
+        run: /
           docker compose -f docker-compose.ci.yml down -v
