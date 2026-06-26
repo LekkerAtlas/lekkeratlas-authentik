@@ -200,5 +200,5 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: /
+        run: |
           docker compose -f docker-compose.ci.yml down -v
