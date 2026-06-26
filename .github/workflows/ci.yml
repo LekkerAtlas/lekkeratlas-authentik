@@ -160,6 +160,11 @@ jobs:
         run: |
           bash scripts/ci/wait_for_authentik_blueprints.sh docker-compose.ci.yml worker
 
+      - name: Debug blueprint failure
+        if: failure()
+        run: |
+          bash scripts/ci/debug_authentik_blueprints.sh docker-compose.ci.yml worker
+
       - name: Check expected Authentik objects
         run: |
           docker compose -f docker-compose.ci.yml exec -T worker ak shell -c "
