@@ -180,16 +180,16 @@ jobs:
           "
 
       - name: Save tested Docker image
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'pull_request'
         run: |
           mkdir -p out
           docker save "${LOCAL_IMAGE}" > out/authentik-image.tar
 
       - name: Upload tested Docker image artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: authentik-image-${{ github.sha }}
+          name: authentik-image-pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
           path: out/authentik-image.tar
           retention-days: 7
 
