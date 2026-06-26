@@ -55,16 +55,23 @@ for scope_name in required_scopes:
 
 echo
 echo "== Re-apply failed custom blueprints with traceback =="
-docker compose -f "$compose_file" exec -T "$service_name" sh -lc '
-set -eu
 
-for path in $(ak shell -c "
+failed_paths="$(
+  docker compose -f "$compose_file" exec -T "$service_name" ak shell -c '
 from authentik.blueprints.models import BlueprintInstance
-for bp in BlueprintInstance.objects.filter(path__startswith=\"custom/\", status=\"error\").order_by(\"path\"):
+
+for bp in BlueprintInstance.objects.filter(path__startswith="custom/", status="error").order_by("path"):
     print(bp.path)
-" | grep "^custom/"); do
-  echo
-  echo "Re-applying ${path}"
-  ak apply_blueprint "${path}" --traceback -v 3
-done
-'
+' | grep '^custom/' || true
+)"
+
+if [[ -z "$failed_paths" ]]; then
+  echo "No failed custom blueprints to re-apply."
+else
+  while IFS= read -r path; do
+    echo
+    echo "Re-applying ${path}"
+    docker compose -f "$compose_file" exec -T "$service_name" \
+      ak apply_blueprint "$path" --traceback -v 3
+  done <<<"$failed_paths"
+fi
