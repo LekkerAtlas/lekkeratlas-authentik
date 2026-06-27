@@ -99,55 +99,73 @@ jobs:
 
       - name: Wait for worker readiness
         run: |
-          timeout 300 bash -c '
-            while true; do
-              worker_id="$(docker compose -f docker-compose.yml ps -q worker || true)"
+          deadline=$((SECONDS + 300))
 
-              if [ -z "$worker_id" ]; then
-                echo "Worker container does not exist."
+          while true; do
+            worker_id="$(docker compose -f docker-compose.yml ps -q worker || true)"
+
+            if [ -z "$worker_id" ]; then
+              echo "Worker container does not exist."
+              docker compose -f docker-compose.yml ps -a
+              docker compose -f docker-compose.yml logs --no-color --tail=300 worker
+              exit 1
+            fi
+
+            worker_status="$(docker inspect -f "{{.State.Status}}" "$worker_id")"
+            worker_exit_code="$(docker inspect -f "{{.State.ExitCode}}" "$worker_id")"
+
+            case "$worker_status" in
+              exited|dead)
+                echo "Worker hard-failed before becoming ready. Exit code: $worker_exit_code"
+                echo
                 docker compose -f docker-compose.yml ps -a
+                echo
+                docker compose -f docker-compose.yml logs --no-color --tail=300 worker
+                exit "$worker_exit_code"
+                ;;
+
+              restarting)
+                echo "Worker is restarting, which should not happen in CI."
+                echo
+                docker compose -f docker-compose.yml ps -a
+                echo
                 docker compose -f docker-compose.yml logs --no-color --tail=300 worker
                 exit 1
-              fi
+                ;;
+            esac
 
-              worker_status="$(docker inspect -f "{{.State.Status}}" "$worker_id")"
-              worker_exit_code="$(docker inspect -f "{{.State.ExitCode}}" "$worker_id")"
+            if docker compose -f docker-compose.yml exec -T worker ak shell -c '
+              from authentik.core.models import Application
+              from authentik.brands.models import Brand
+              from authentik.flows.models import Flow
 
-              case "$worker_status" in
-                exited|dead)
-                  echo "Worker hard-failed before becoming ready. Exit code: $worker_exit_code"
-                  echo
-                  docker compose -f docker-compose.yml ps -a
-                  echo
-                  echo "Recent worker logs:"
-                  docker compose -f docker-compose.yml logs --no-color --tail=300 worker
-                  exit "$worker_exit_code"
-                  ;;
+              app = Application.objects.get(slug="lekker-atlas")
+              flow = Flow.objects.get(slug="lekkeratlas-authentication-flow")
+              brand = Brand.objects.get(domain="authentik-default")
 
-                restarting)
-                  echo "Worker is restarting, which should not happen in CI."
-                  echo
-                  docker compose -f docker-compose.yml ps -a
-                  echo
-                  echo "Recent worker logs:"
-                  docker compose -f docker-compose.yml logs --no-color --tail=300 worker
-                  exit 1
-                  ;;
-              esac
+              assert app.provider is not None, "LekkerAtlas application has no provider"
+              assert brand.default_application_id == app.pk, "Brand does not point to LekkerAtlas application"
+              assert brand.flow_authentication_id == flow.pk, "Brand does not point to LekkerAtlas authentication flow"
 
-              if docker compose -f docker-compose.yml exec -T worker /usr/local/lib/lekkeratlas/healthcheck.sh; then
-                echo "Worker is ready."
-                exit 0
-              fi
+              print("Worker is ready and LekkerAtlas blueprints are applied.")
+              '; then
+                      exit 0
+                    fi
 
-              echo "Worker is not ready yet. Current container state:"
-              docker compose -f docker-compose.yml ps -a
-              echo
-              echo "Recent worker logs:"
-              docker compose -f docker-compose.yml logs --no-color --tail=160 worker
-              sleep 5
-            done
-          '
+                    if [ "$SECONDS" -ge "$deadline" ]; then
+                      echo "Timed out waiting for worker readiness."
+                      docker compose -f docker-compose.yml ps -a
+                      echo
+                      docker compose -f docker-compose.yml logs --no-color --tail=300 worker
+                      exit 1
+                    fi
+
+                    echo "Worker is running, but LekkerAtlas blueprint state is not ready yet."
+                    docker compose -f docker-compose.yml ps -a
+                    echo
+                    docker compose -f docker-compose.yml logs --no-color --tail=120 worker
+                    sleep 5
+                  done
 
       - name: Save tested Docker image
         if: github.event_name == 'pull_request'
