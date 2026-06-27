@@ -76,5 +76,5 @@ jobs:
           image="${REGISTRY}/${IMAGE_NAME}"
           image="$(echo "$image" | tr '[:upper:]' '[:lower:]')"
 
-          docker tag "${LOCAL_IMAGE}" "${image}:experimental"
+          docker tag "${TESTED_IMAGE}" "${image}:experimental"
           docker push "${image}:experimental"
