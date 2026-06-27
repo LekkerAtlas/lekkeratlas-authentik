@@ -4,7 +4,7 @@ version: 1
 metadata:
   name: LekkerAtlas user sync
   labels:
-    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/instantiate: "false"
     blueprints.goauthentik.io/description: "Sync authentik user changes to the LekkerAtlas API"
 
 context: {}

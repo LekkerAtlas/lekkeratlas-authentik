@@ -1,4 +1,4 @@
-x-authentik-image-name: &authentik-image-name lekkeratlas-authentik:${AUTHENTIK_TAG:-2026.2.4}
+x-authentik-image-name: &authentik-image-name lekkeratlas-authentik:${AUTHENTIK_TAG:-2026.5.3}
 
 services:
   postgresql:
@@ -28,7 +28,7 @@ services:
       context: .
       dockerfile: container/authentik/Dockerfile
       args:
-        AUTHENTIK_TAG: ${AUTHENTIK_TAG:-2026.2.4}
+        AUTHENTIK_TAG: ${AUTHENTIK_TAG:-2026.5.3}
     restart: unless-stopped
     command: server
     depends_on:
@@ -49,13 +49,11 @@ services:
     shm_size: 512mb
     volumes:
       - authentik_data:/data
-      - ./custom-templates:/templates:ro
-      - ./authentik/blueprints:/blueprints/custom:ro
 
   worker:
     image: *authentik-image-name
     pull_policy: never
-    restart: unless-stopped
+    restart: ${AUTHENTIK_WORKER_RESTART_POLICY:-unless-stopped}
     command: worker
     depends_on:
       postgresql:
@@ -65,12 +63,19 @@ services:
     env_file:
       - .env
     environment:
+      LEKKERATLAS_HEALTH_REQUIRE_BLUEPRINTS: "true"
+      LEKKERATLAS_STATE_DIR: /tmp/lekkeratlas
+
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY:?secret key required}
       AUTHENTIK_ERROR_REPORTING__ENABLED: ${AUTHENTIK_ERROR_REPORTING__ENABLED:-false}
       AUTHENTIK_POSTGRESQL__HOST: postgresql
       AUTHENTIK_POSTGRESQL__NAME: ${PG_DB:-authentik}
       AUTHENTIK_POSTGRESQL__USER: ${PG_USER:-authentik}
       AUTHENTIK_POSTGRESQL__PASSWORD: ${PG_PASS:?database password required}
+
+      AUTHENTIK_LEKKERATLAS_FQDN: ${AUTHENTIK_LEKKERATLAS_FQDN:?required}
+      AUTHENTIK_LEKKERATLAS_REDIRECT_URI: ${AUTHENTIK_LEKKERATLAS_REDIRECT_URI:?required}
+      AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN: ${AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN:?required}
 
       AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN: ${AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN:?required}
       AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET: ${AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET:?required}
@@ -80,9 +85,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - authentik_data:/data
-      - ./certs:/certs
-      - ./custom-templates:/templates:ro
-      - ./authentik/blueprints:/blueprints/custom:ro
 
 volumes:
   database:

@@ -4,7 +4,7 @@ version: 1
 metadata:
   name: LekkerAtlas login flow
   labels:
-    blueprints.goauthentik.io/instantiate: "true"
+    blueprints.goauthentik.io/instantiate: "false"
     blueprints.goauthentik.io/description: "Single-screen username/password login flow for LekkerAtlas"
 
 context: {}

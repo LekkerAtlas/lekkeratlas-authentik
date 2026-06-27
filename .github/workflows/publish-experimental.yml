@@ -1,13 +1,11 @@
 name: Publish experimental image
 
 on:
-  workflow_run:
-    workflows:
-      - CI
+  pull_request:
     branches:
       - main
     types:
-      - completed
+      - closed
 
 env:
   REGISTRY: ghcr.io
@@ -19,9 +17,7 @@ jobs:
     name: Publish experimental
     runs-on: ubuntu-latest
 
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'push'
+    if: github.event.pull_request.merged == true
 
     permissions:
       contents: read
@@ -29,11 +25,35 @@ jobs:
       packages: write
 
     steps:
+      - name: Find successful PR CI run
+        id: ci-run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          run_id="$(
+            gh run list \
+              --workflow "CI" \
+              --event pull_request \
+              --commit "$HEAD_SHA" \
+              --status success \
+              --json databaseId \
+              --jq '.[0].databaseId'
+          )"
+
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "No successful CI run found for PR #${PR_NUMBER} at ${HEAD_SHA}" >&2
+            exit 1
+          fi
+
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
       - name: Download tested image artifact
         uses: actions/download-artifact@v5
         with:
-          name: authentik-image-${{ github.event.workflow_run.head_sha }}
-          run-id: ${{ github.event.workflow_run.id }}
+          name: authentik-image-pr-${{ github.event.pull_request.number }}-${{ github.event.pull_request.head.sha }}
+          run-id: ${{ steps.ci-run.outputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: out
 
