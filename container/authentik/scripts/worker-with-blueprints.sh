@@ -5,12 +5,23 @@ source /usr/local/lib/lekkeratlas/common.sh
 
 worker_pid=""
 
+state_dir="${LEKKERATLAS_STATE_DIR:-/tmp/lekkeratlas}"
+blueprint_ready_marker="${state_dir}/blueprints-ready"
+
+prepare_state_dir() {
+  mkdir -p "$state_dir"
+  rm -f "$blueprint_ready_marker"
+}
+
 shutdown() {
   log "Received shutdown signal."
 
   if [[ -n "$worker_pid" ]] && kill -0 "$worker_pid" 2>/dev/null; then
     kill "$worker_pid" 2>/dev/null || true
-    wait "$worker_pid" 2>/dev/null || true
+
+    set +e
+    wait "$worker_pid" 2>/dev/null
+    set -e
   fi
 
   exit 143
@@ -42,13 +53,18 @@ stop_worker_and_exit() {
   if [[ -n "$worker_pid" ]] && kill -0 "$worker_pid" 2>/dev/null; then
     log "Stopping Authentik worker."
     kill "$worker_pid" 2>/dev/null || true
-    wait "$worker_pid" 2>/dev/null || true
+
+    set +e
+    wait "$worker_pid" 2>/dev/null
+    set -e
   fi
 
   exit "$exit_code"
 }
 
 trap shutdown TERM INT
+
+prepare_state_dir
 
 log "Starting Authentik worker..."
 ak worker &
@@ -68,12 +84,15 @@ if is_true "${AUTHENTIK_BLUEPRINT_APPLY_ENABLED:-true}"; then
   fi
 
   log "Blueprint deployment completed successfully."
+  date -Iseconds >"$blueprint_ready_marker"
 else
   log "Blueprint applier is disabled."
 fi
 
+set +e
 wait "$worker_pid"
 worker_status="$?"
+set -e
 
 log "Authentik worker exited with status ${worker_status}."
 exit "$worker_status"

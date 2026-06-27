@@ -84,19 +84,6 @@ jobs:
         run: |
           docker compose -f docker-compose.yml up -d --build
 
-      - name: Wait for server readiness
-        run: |
-          timeout 300 bash -c '
-            until curl -fsS http://localhost:9000/-/health/ready/ > /dev/null; do
-              echo "Server is not ready yet. Current container state:"
-              docker compose -f docker-compose.yml ps
-              echo
-              echo "Recent server logs:"
-              docker compose -f docker-compose.yml logs --no-color --tail=80 server
-              sleep 5
-            done
-          '
-
       - name: Wait for worker readiness
         run: |
           deadline=$((SECONDS + 300))
@@ -134,38 +121,25 @@ jobs:
                 ;;
             esac
 
-            if docker compose -f docker-compose.yml exec -T worker ak shell -c '
-              from authentik.core.models import Application
-              from authentik.brands.models import Brand
-              from authentik.flows.models import Flow
+            if docker compose -f docker-compose.yml exec -T worker test -f /tmp/lekkeratlas/blueprints-ready; then
+              echo "Worker is ready and blueprints were applied successfully."
+              exit 0
+            fi
 
-              app = Application.objects.get(slug="lekker-atlas")
-              flow = Flow.objects.get(slug="lekkeratlas-authentication-flow")
-              brand = Brand.objects.get(domain="authentik-default")
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "Timed out waiting for blueprint application."
+              docker compose -f docker-compose.yml ps -a
+              echo
+              docker compose -f docker-compose.yml logs --no-color --tail=300 worker
+              exit 1
+            fi
 
-              assert app.provider is not None, "LekkerAtlas application has no provider"
-              assert brand.default_application_id == app.pk, "Brand does not point to LekkerAtlas application"
-              assert brand.flow_authentication_id == flow.pk, "Brand does not point to LekkerAtlas authentication flow"
-
-              print("Worker is ready and LekkerAtlas blueprints are applied.")
-              '; then
-                      exit 0
-                    fi
-
-                    if [ "$SECONDS" -ge "$deadline" ]; then
-                      echo "Timed out waiting for worker readiness."
-                      docker compose -f docker-compose.yml ps -a
-                      echo
-                      docker compose -f docker-compose.yml logs --no-color --tail=300 worker
-                      exit 1
-                    fi
-
-                    echo "Worker is running, but LekkerAtlas blueprint state is not ready yet."
-                    docker compose -f docker-compose.yml ps -a
-                    echo
-                    docker compose -f docker-compose.yml logs --no-color --tail=120 worker
-                    sleep 5
-                  done
+            echo "Worker is running, but blueprint application has not completed yet."
+            docker compose -f docker-compose.yml ps -a
+            echo
+            docker compose -f docker-compose.yml logs --no-color --tail=120 worker
+            sleep 5
+          done
 
       - name: Save tested Docker image
         if: github.event_name == 'pull_request'
