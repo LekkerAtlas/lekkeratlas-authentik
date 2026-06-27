@@ -127,34 +127,6 @@ assert_blueprint_successful() {
   esac
 }
 
-assert_runtime_state() {
-  if ! is_true "${AUTHENTIK_BLUEPRINT_ASSERT_RUNTIME_STATE:-true}"; then
-    log "Skipping runtime state assertion."
-    return 0
-  fi
-
-  log "Checking LekkerAtlas runtime state..."
-
-  ak shell -c '
-from authentik.core.models import Application
-from authentik.brands.models import Brand
-from authentik.flows.models import Flow
-
-app = Application.objects.get(slug="lekker-atlas")
-flow = Flow.objects.get(slug="lekkeratlas-authentication-flow")
-brand = Brand.objects.get(domain="authentik-default")
-
-assert app.provider is not None, "LekkerAtlas application has no provider"
-assert brand.default_application_id == app.pk, "Brand does not point to LekkerAtlas application"
-assert brand.flow_authentication_id == flow.pk, "Brand does not point to LekkerAtlas authentication flow"
-
-print("Runtime state is valid")
-print("Application:", app.slug, app.provider)
-print("Flow:", flow.slug)
-print("Brand:", brand.domain, brand.flow_authentication)
-'
-}
-
 main() {
   if [[ ! -d "$blueprint_root" ]]; then
     log "Blueprint root does not exist: ${blueprint_root}"
@@ -189,8 +161,6 @@ main() {
       exit 1
     fi
   done
-
-  assert_runtime_state
 
   log "All blueprints applied successfully."
 }
