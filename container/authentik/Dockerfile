@@ -19,7 +19,7 @@ RUN chmod -R a+rX \
 
 USER authentik
 
-HEALTHCHECK --interval=10s --retries=3 \
+HEALTHCHECK --interval=15s --retries=3 \
   CMD /usr/local/lib/lekkeratlas/healthcheck.sh || exit 1
 
 ENTRYPOINT ["/usr/local/bin/lekkeratlas-entrypoint"]
