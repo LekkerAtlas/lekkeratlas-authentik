@@ -1,4 +1,4 @@
-x-authentik-image-name: &authentik-image-name lekkeratlas-authentik:${AUTHENTIK_TAG:-2026.5.3}
+x-authentik-image-name: &authentik-image-name lekkeratlas-authentik:${LEKKERATLAS_IMAGE_TAG:-local}
 
 services:
   postgresql:
