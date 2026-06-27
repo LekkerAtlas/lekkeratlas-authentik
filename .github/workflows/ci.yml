@@ -8,7 +8,7 @@ on:
 
 env:
   AUTHENTIK_TAG: 2026.5.3
-  TESTED_IMAGE: lekkeratlas-authentik:2026.5.3
+  TESTED_IMAGE: lekkeratlas-authentik:ci
 
   # CI-only Authentik config
   PG_DB: authentik
