@@ -29,11 +29,13 @@ jobs:
         id: ci-run
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           run_id="$(
             gh run list \
+              --repo "$GH_REPO" \
               --workflow "CI" \
               --event pull_request \
               --commit "$HEAD_SHA" \
