@@ -27,7 +27,7 @@ entries:
         !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       redirect_uris:
         - matching_mode: strict
-          url: !Env AUTHENTIK_LEKKERATLAS_REDIRECT_URI
+          url: !Env AUTHENTIK_LEKKERATLAS_REDIRECT_URIS
       property_mappings:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, openid]]
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, email]]

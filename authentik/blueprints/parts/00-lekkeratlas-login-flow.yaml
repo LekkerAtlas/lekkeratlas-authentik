@@ -71,7 +71,6 @@ entries:
     id: lekkeratlas-user-login-stage
     identifiers:
       name: lekkeratlas-user-login
-      |
     attrs:
       name: lekkeratlas-user-login
       geoip_binding: no_binding
