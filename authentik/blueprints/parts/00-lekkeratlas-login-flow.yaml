@@ -65,12 +65,13 @@ entries:
 
       # This is the important line.
       # It embeds the password field into the username/email step.
-      password_stage: !KeyOf lekkeratlas-password-stages
+      password_stage: !KeyOf lekkeratlas-password-stage
 
   - model: authentik_stages_user_login.userloginstage
     id: lekkeratlas-user-login-stage
     identifiers:
       name: lekkeratlas-user-login
+      |
     attrs:
       name: lekkeratlas-user-login
       geoip_binding: no_binding
