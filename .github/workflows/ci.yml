@@ -8,7 +8,8 @@ on:
 
 env:
   AUTHENTIK_TAG: 2026.5.3
-  TESTED_IMAGE: lekkeratlas-authentik:2026.5.3
+  LEKKERATLAS_IMAGE_TAG: ci
+  TESTED_IMAGE: lekkeratlas-authentik:ci
 
   # CI-only Authentik config
   PG_DB: authentik
@@ -52,6 +53,7 @@ jobs:
         run: |
           cat > .env <<EOF
           AUTHENTIK_TAG=${AUTHENTIK_TAG}
+          LEKKERATLAS_IMAGE_TAG=${LEKKERATLAS_IMAGE_TAG}
 
           PG_DB=${PG_DB}
           PG_USER=${PG_USER}

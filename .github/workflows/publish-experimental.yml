@@ -10,7 +10,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/lekkeratlas-authentik
-  LOCAL_IMAGE: lekkeratlas-authentik:ci
+  TESTED_IMAGE: lekkeratlas-authentik:ci
 
 jobs:
   publish:
@@ -62,7 +62,7 @@ jobs:
       - name: Load tested Docker image
         run: |
           docker load --input out/authentik-image.tar
-          docker image inspect "${LOCAL_IMAGE}"
+          docker image inspect "${TESTED_IMAGE}"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -75,5 +75,5 @@ jobs:
         run: |
           image="${REGISTRY}/${IMAGE_NAME}"
 
-          docker tag "${LOCAL_IMAGE}" "${image}:experimental"
+          docker tag "${TESTED_IMAGE}" "${image}:experimental"
           docker push "${image}:experimental"
