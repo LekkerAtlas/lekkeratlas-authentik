@@ -49,6 +49,7 @@ jobs:
       - name: Promote experimental image
         run: |
           image="${REGISTRY}/${IMAGE_NAME}"
+          image="$(echo "$image" | tr '[:upper:]' '[:lower:]')"
           version="${{ steps.version.outputs.version }}"
 
           docker buildx imagetools create \
@@ -59,6 +60,7 @@ jobs:
       - name: Inspect promoted image
         run: |
           image="${REGISTRY}/${IMAGE_NAME}"
+          image="$(echo "$image" | tr '[:upper:]' '[:lower:]')"
           version="${{ steps.version.outputs.version }}"
 
           docker buildx imagetools inspect "${image}:${version}"
