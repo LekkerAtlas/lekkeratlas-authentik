@@ -47,6 +47,28 @@ wait_for_authentik_ready() {
   return 1
 }
 
+apply_blueprints_with_retries() {
+  local max_attempts="${AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS:-5}"
+  local sleep_seconds="${AUTHENTIK_BLUEPRINT_APPLY_SLEEP_SECONDS:-5}"
+
+  for attempt in $(seq 1 "$max_attempts"); do
+    log "Blueprint deployment attempt ${attempt}/${max_attempts}"
+
+    if /usr/local/lib/lekkeratlas/apply-blueprints-by-filename.sh; then
+      log "Blueprint deployment succeeded."
+      return 0
+    fi
+
+    if [[ "$attempt" -lt "$max_attempts" ]]; then
+      log "Blueprint deployment failed. Waiting ${sleep_seconds}s before retrying..."
+      sleep "$sleep_seconds"
+    fi
+  done
+
+  log "Blueprint deployment failed after ${max_attempts} attempt(s)."
+  return 1
+}
+
 stop_worker_and_exit() {
   local exit_code="$1"
 
@@ -78,7 +100,7 @@ if is_true "${AUTHENTIK_BLUEPRINT_APPLY_ENABLED:-true}"; then
 
   log "Applying LekkerAtlas blueprints."
 
-  if ! /usr/local/lib/lekkeratlas/apply-blueprints-by-filename.sh; then
+  if ! apply_blueprints_with_retries; then
     log "Stopping because blueprint deployment failed."
     stop_worker_and_exit 1
   fi
