@@ -25,6 +25,8 @@ entries:
         ]
       invalidation_flow:
         !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      grant_types:
+        - authorization_code
       redirect_uris:
         - matching_mode: strict
           url: !Env AUTHENTIK_LEKKERATLAS_REDIRECT_URI
