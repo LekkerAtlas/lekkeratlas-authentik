@@ -73,13 +73,13 @@ entries:
   - model: authentik_policies_event_matcher.eventmatcherpolicy
     id: lekkeratlas-sync-user-events-policy
     identifiers:
-      name: Sync user login events
+      name: Sync all events
     attrs:
-      name: Sync user login events
-      action: login
-      app: authentik.events
+      name: Sync all events
+      action: null
+      app: null
       client_ip: null
-      execution_logging: true
+      execution_logging: false
       model: null
 
   - model: authentik_policies.policybinding
