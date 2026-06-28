@@ -18,6 +18,13 @@ entries:
       name: Provider for LekkerAtlas
       client_id: lekkeratlas-local
       client_type: public
+
+      signing_key:
+        !Find [
+          authentik_crypto.certificatekeypair,
+          [name, authentik Self-signed Certificate],
+        ]
+
       authorization_flow:
         !Find [
           authentik_flows.flow,
