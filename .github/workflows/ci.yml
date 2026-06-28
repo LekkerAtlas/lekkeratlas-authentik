@@ -25,6 +25,8 @@ jobs:
         run: cp .env.example .env
 
       - name: Build and start Authentik stack
+        env:
+          LEKKERATLAS_IMAGE_TAG: ci
         run: docker compose -f docker-compose.yml up -d --build
 
       - name: Wait for worker readiness
