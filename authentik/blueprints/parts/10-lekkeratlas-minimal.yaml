@@ -36,6 +36,8 @@ entries:
         - !Find [authentik_providers_oauth2.scopemapping, [scope_name, profile]]
       sub_mode: user_uuid
       issuer_mode: per_provider
+      logout_uri: !Env AUTHENTIK_LEKKERATLAS_LOGOUT_URI
+      logout_method: frontchannel
 
   - model: authentik_core.application
     identifiers:
