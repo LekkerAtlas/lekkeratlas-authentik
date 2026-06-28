@@ -7,35 +7,7 @@ on:
   workflow_dispatch:
 
 env:
-  AUTHENTIK_TAG: 2026.5.3
-  LEKKERATLAS_IMAGE_TAG: ci
   TESTED_IMAGE: lekkeratlas-authentik:ci
-
-  # CI-only Authentik config
-  PG_DB: authentik
-  PG_USER: authentik
-  PG_PASS: authentik
-  AUTHENTIK_SECRET_KEY: ci-only-secret-key-change-me
-  AUTHENTIK_ERROR_REPORTING__ENABLED: "false"
-
-  # CI-only blueprint variables
-  AUTHENTIK_LEKKERATLAS_FQDN: http://localhost:3000
-  AUTHENTIK_LEKKERATLAS_REDIRECT_URI: http://localhost:3000
-  AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN: http://host.docker.internal:3000/webhooks/authentik
-  AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN: ci-only-token
-  AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET: ci-only-client-secret
-  AUTHENTIK_RABBITMQ_CLIENT_SECRET: ci-only-rabbitmq-secret
-
-  # Compose ports
-  COMPOSE_PORT_HTTP: "9000"
-  COMPOSE_PORT_HTTPS: "9443"
-
-  # Blueprint development behavior
-  AUTHENTIK_BLUEPRINT_APPLY_ENABLED: "true"
-  AUTHENTIK_BLUEPRINT_APPLY_REQUIRED: "true"
-  AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS: "5"
-  AUTHENTIK_BLUEPRINT_APPLY_SLEEP_SECONDS: "5"
-  AUTHENTIK_WORKER_RESTART_POLICY: "no"
 
 jobs:
   test:
@@ -50,38 +22,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create CI .env file
-        run: |
-          cat > .env <<EOF
-          AUTHENTIK_TAG=${AUTHENTIK_TAG}
-          LEKKERATLAS_IMAGE_TAG=${LEKKERATLAS_IMAGE_TAG}
-
-          PG_DB=${PG_DB}
-          PG_USER=${PG_USER}
-          PG_PASS=${PG_PASS}
-
-          AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY}
-          AUTHENTIK_ERROR_REPORTING__ENABLED=${AUTHENTIK_ERROR_REPORTING__ENABLED}
-
-          AUTHENTIK_LEKKERATLAS_FQDN=${AUTHENTIK_LEKKERATLAS_FQDN}
-          AUTHENTIK_LEKKERATLAS_REDIRECT_URI=${AUTHENTIK_LEKKERATLAS_REDIRECT_URI}
-          AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN=${AUTHENTIK_LEKKERATLAS_WEBHOOK_FQDN}
-          AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN=${AUTHENTIK_WEBHOOK_SYNC_LEKKERATLAS_DB_BEARER_TOKEN}
-          AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET=${AUTHENTIK_PROVIDER_FOR_LEKKERATLAS_CLIENT_SECRET}
-          AUTHENTIK_RABBITMQ_CLIENT_SECRET=${AUTHENTIK_RABBITMQ_CLIENT_SECRET}
-
-          COMPOSE_PORT_HTTP=${COMPOSE_PORT_HTTP}
-          COMPOSE_PORT_HTTPS=${COMPOSE_PORT_HTTPS}
-
-          AUTHENTIK_BLUEPRINT_APPLY_ENABLED=${AUTHENTIK_BLUEPRINT_APPLY_ENABLED}
-          AUTHENTIK_BLUEPRINT_APPLY_REQUIRED=${AUTHENTIK_BLUEPRINT_APPLY_REQUIRED}
-          AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS=${AUTHENTIK_BLUEPRINT_APPLY_ATTEMPTS}
-          AUTHENTIK_BLUEPRINT_APPLY_SLEEP_SECONDS=${AUTHENTIK_BLUEPRINT_APPLY_SLEEP_SECONDS}
-          AUTHENTIK_WORKER_RESTART_POLICY=${AUTHENTIK_WORKER_RESTART_POLICY}
-          EOF
+        run: cp .env.example .env
 
       - name: Build and start Authentik stack
-        run: |
-          docker compose -f docker-compose.yml up -d --build
+        run: docker compose -f docker-compose.yml up -d --build
 
       - name: Wait for worker readiness
         run: |
@@ -162,5 +106,4 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: |
-          docker compose -f docker-compose.yml down -v
+        run: docker compose -f docker-compose.yml down -v
